@@ -22,9 +22,12 @@
     "require": {
         "php": ">=8.0.0",
         "yiisoft/yii2": "^2.0.0",
+        "futuretek/yii2-composer": "^2.0.0"
+    },
+    "require-dev": {
         "yiisoft/yii2-gii": "^2.0.0",
-        "futuretek/yii2-composer": "^2.0.0",
-        "cebe/php-openapi": "^1.7.0"
+        "cebe/php-openapi": "^1.7.0",
+        "laminas/laminas-code": "^4.7.1"
     },
     "autoload": {
         "psr-4": {
@@ -48,10 +51,7 @@
                     "class": "yii\\gii\\Module",
                     "generators": {
                         "openapi": {
-                            "class": "futuretek\\gii\\openapi\\server\\Generator",
-                            "templates": {
-                                "default": "@app/vendor/futuretek/yii2-gii-openapi-server/default"
-                            }
+                            "class": "futuretek\\gii\\openapi\\server\\Generator"
                         }
                     }
                 }
