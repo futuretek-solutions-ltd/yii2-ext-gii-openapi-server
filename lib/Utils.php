@@ -12,7 +12,7 @@ class Utils
 {
     public static function getPathFromNamespace(string $namespace): string
     {
-        return \Yii::getAlias('@' . str_replace('\\', '/', ltrim($namespace, '\\')));
+        return \Yii::getAlias('@' . str_replace('\\', '/', $namespace));
     }
 
     public static function schemaToType(Schema $schema): string
@@ -21,9 +21,9 @@ class Utils
             case 'string':
                 switch ($schema?->format) {
                     case 'date':
-                        return Date::class;
+                        return '\\' . Date::class;
                     case 'date-time':
-                        return \DateTime::class;
+                        return '\\' . \DateTime::class;
                     default:
                         return 'string';
                 }
@@ -40,7 +40,13 @@ class Utils
                 return 'bool';
             case 'array':
                 if ($schema?->items) {
-                    return self::schemaFromRef($schema->items) . '[]';
+                    if ($schema->items instanceof Reference) {
+                        return self::schemaFromRef($schema->items) . '[]';
+                    }
+                    if ($schema->items instanceof Schema) {
+                        return self::schemaToType($schema->items) . '[]';
+                    }
+                    throw new InvalidArgumentException("Unsupported array configuration.");
                 }
 
                 return 'array';
@@ -89,6 +95,6 @@ class Utils
     {
         $reference = $ref->getReference();
 
-        return Config::$schemaNamespace . '\\' . substr($reference, strrpos($reference, '/') + 1);
+        return '\\' . Config::$schemaNamespace . '\\' . substr($reference, strrpos($reference, '/') + 1);
     }
 }

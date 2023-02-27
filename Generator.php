@@ -126,22 +126,6 @@ class Generator extends \yii\gii\Generator
     /**
      * @inheritdoc
      */
-    public function requiredTemplates()
-    {
-        $required = [];
-        if (!empty($this->routeFile)) {
-            $required[] = 'routes.php';
-        }
-
-        $required[] = 'controller.php';
-        $required[] = 'dbmodel.php';
-
-        return $required;
-    }
-
-    /**
-     * @inheritdoc
-     */
     public function stickyAttributes()
     {
         return array_merge(parent::stickyAttributes(), [

@@ -101,7 +101,7 @@ class SchemaGenerator
         $tags[] = new VarTag(null, $type, $property->description);
 
         if ($enumName) {
-            $tags[] = new GenericTag('see', Config::$enumNamespace . '\\' . $enumName . ' for allowed vaules');
+            $tags[] = new GenericTag('see', '\\' . Config::$enumNamespace . '\\' . $enumName . ' for allowed vaules');
         }
 
         $docGen->setTags($tags);

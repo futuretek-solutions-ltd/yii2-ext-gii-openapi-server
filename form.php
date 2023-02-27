@@ -17,3 +17,5 @@
 <?= $form->field($generator, 'schemaNamespace') ?>
 
 <?= $form->field($generator, 'enumNamespace') ?>
+
+<?= $form->field($generator, 'urlPrefix') ?>
