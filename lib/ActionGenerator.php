@@ -82,16 +82,7 @@ class ActionGenerator
 
             foreach (['get', 'post', 'put', 'patch', 'delete', 'head', 'options', 'trace'] as $methodName) {
                 if (!empty($pathItem->{$methodName})) {
-                    $actionData = $this->parsePath($pathPrefixed);
-
-                    $customControllerName = $property->{'x-controller'} ?? null;
-                    if ($customControllerName) {
-                        if (!str_contains($customControllerName, 'Controller')) {
-                            $customControllerName .= 'Controller';
-                        }
-                        $actionData->controllerClass = $customControllerName;
-                    }
-
+                    $actionData = $this->parsePath($pathPrefixed, $pathItem);
                     $controllerName = $actionData->controllerNs . '\\' . $actionData->controllerClass;
                     if (!array_key_exists($controllerName, $controllers)) {
                         $controllers[$controllerName] = new ControllerData([
@@ -104,7 +95,7 @@ class ActionGenerator
                     $controllers[$controllerName]->methods[] = $this->generateAction($pathPrefixed, $pathItem->{$methodName}, $actionData, $parameters);
 
                     $fnName = $pathItem->{$methodName}->operationId ?? $actionData->actionName;
-                    $routes[strtoupper($methodName) . ' ' . $this->convertPathVariables($path)] = $this->parseControllerUri($path) . '/' . Inflector::camel2id($fnName);
+                    $routes[strtoupper($methodName) . ' ' . $this->convertPathVariables($path)] = $this->parseControllerUri($actionData) . '/' . Inflector::camel2id($fnName);
                 }
             }
         }
@@ -289,47 +280,34 @@ class ActionGenerator
         return implode('/', $parts);
     }
 
-    protected function parseControllerUri(string $path): string
+    protected function parseControllerUri(ActionData $data): string
     {
-        $parts = explode('/', $path);
-        $variables = [];
-        $controller = [];
-        $action = [];
-        $cPart = true;
+        $prefix = 'app\\' . Config::$urlPrefix;
+
+        $parts = explode('\\', str_replace($prefix, '', $data->controllerNs));
+        $parts[] = str_replace('Controller', '', $data->controllerClass);
+
+        $result = [];
         foreach ($parts as $part) {
-            if (empty($part)) {
+            if (!$part || $part === 'controllers') {
                 continue;
             }
-            if (preg_match('/^\{.*\}$/', $part)) {
-                $variables[] = trim($part, '{}');
-                $cPart = false;
-            } else {
-                if ($cPart) {
-                    $controller[] = $part;
-                } else {
-                    $action[] = $part;
-                }
-            }
+            $result[] = Inflector::camel2id($part);
         }
 
-        if (count($action) === 0 && count($controller) > 1) {
-            $action[] = array_pop($controller);
-        }
-
-        if (count($controller) === 0 || count($action) === 0) {
-            throw new InvalidConfigException("Path $path cannot be parsed.");
-        }
-
-        return implode('/', $controller);
+        return implode('/', $result);
     }
 
-    protected function parsePath(string $path): ActionData
+    protected function parsePath(string $path, $pathItem): ActionData
     {
         $parts = explode('/', $path);
         $variables = [];
         $controller = [];
         $action = [];
         $cPart = true;
+        $customControllerClass = $pathItem->{'x-controller'} ?? null;
+        $customNs = $pathItem->{'x-ns'} ?? null;
+
         foreach ($parts as $part) {
             if (empty($part)) {
                 continue;
@@ -355,9 +333,18 @@ class ActionGenerator
         }
 
         $result = new ActionData();
-        $result->controllerClass = Inflector::id2camel(array_pop($controller)) . 'Controller';
+
+        if ($customControllerClass) {
+            if (!str_contains($customControllerClass, 'Controller')) {
+                $customControllerClass .= 'Controller';
+            }
+            $result->controllerClass = $customControllerClass;
+        } else {
+            $result->controllerClass = Inflector::id2camel(array_pop($controller)) . 'Controller';
+        }
+
         $controller[] = 'controllers';
-        $result->controllerNs = 'app\\' . implode('\\', $controller);
+        $result->controllerNs = $customNs ? $customNs : 'app\\' . implode('\\', $controller);
         $result->actionName = 'action' . Inflector::id2camel(implode('-', $action));
 
         return $result;
