@@ -78,24 +78,32 @@ class ActionGenerator
                 $pathItem = $pathItem->resolve();
             }
 
-            $actionData = $this->parsePath($pathPrefixed);
-            $controllerName = $actionData->controllerNs . '\\' . $actionData->controllerClass;
-            if (!array_key_exists($controllerName, $controllers)) {
-                $controllers[$controllerName] = new ControllerData([
-                    'data' => $actionData,
-                    'methods' => [],
-                ]);
-            }
-
             $parameters = $pathItem->parameters;
 
             foreach (['get', 'post', 'put', 'patch', 'delete', 'head', 'options', 'trace'] as $methodName) {
                 if (!empty($pathItem->{$methodName})) {
-                    $opData = clone $actionData;
-                    $opData->actionName .= ucfirst($methodName);
-                    $controllers[$controllerName]->methods[] = $this->generateAction($pathPrefixed, $pathItem->{$methodName}, $opData, $parameters);
+                    $actionData = $this->parsePath($pathPrefixed);
 
-                    $fnName = $pathItem->{$methodName}->operationId ?? $opData->actionName;
+                    $customControllerName = $property->{'x-controller'} ?? null;
+                    if ($customControllerName) {
+                        if (!str_contains($customControllerName, 'Controller')) {
+                            $customControllerName .= 'Controller';
+                        }
+                        $actionData->controllerClass = $customControllerName;
+                    }
+
+                    $controllerName = $actionData->controllerNs . '\\' . $actionData->controllerClass;
+                    if (!array_key_exists($controllerName, $controllers)) {
+                        $controllers[$controllerName] = new ControllerData([
+                            'data' => $actionData,
+                            'methods' => [],
+                        ]);
+                    }
+
+                    $actionData->actionName .= ucfirst($methodName);
+                    $controllers[$controllerName]->methods[] = $this->generateAction($pathPrefixed, $pathItem->{$methodName}, $actionData, $parameters);
+
+                    $fnName = $pathItem->{$methodName}->operationId ?? $actionData->actionName;
                     $routes[strtoupper($methodName) . ' ' . $this->convertPathVariables($path)] = $this->parseControllerUri($path) . '/' . Inflector::camel2id($fnName);
                 }
             }
