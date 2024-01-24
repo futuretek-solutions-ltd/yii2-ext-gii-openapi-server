@@ -209,7 +209,7 @@ class ActionGenerator
             $body .= $this->bodyLine("try {");
         }
         if ($requestType) {
-            $body .= $this->bodyLine("\$request = ObjectMapper::configureRecursive(new {$requestType}(), \Yii::\$app->request->getRawBody());\n", $hasExeptions);
+            $body .= $this->bodyLine("\$request = ObjectMapper::toObject(new {$requestType}(), \Yii::\$app->request->getBodyParams());\n", $hasExeptions);
         }
         $body .= $this->bodyLine('//todo: implement method', $hasExeptions);
 
