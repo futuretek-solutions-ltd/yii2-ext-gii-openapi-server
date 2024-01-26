@@ -8,7 +8,7 @@ use futuretek\gii\openapi\server\lib\ActionGenerator;
 use futuretek\gii\openapi\server\lib\Config;
 use futuretek\gii\openapi\server\lib\SchemaGenerator;
 use Yii;
-use yii\helpers\StringHelper;
+use yii\helpers\Html;
 
 class Generator extends \yii\gii\Generator
 {

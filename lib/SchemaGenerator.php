@@ -3,19 +3,16 @@
 namespace futuretek\gii\openapi\server\lib;
 
 use cebe\openapi\spec\OpenApi;
+use cebe\openapi\spec\Reference;
 use cebe\openapi\spec\Schema;
-use futuretek\shared\Date;
 use Laminas\Code\Generator\ClassGenerator;
 use Laminas\Code\Generator\DocBlock\Tag\GenericTag;
-use Laminas\Code\Generator\DocBlock\Tag\TagInterface;
 use Laminas\Code\Generator\DocBlock\Tag\VarTag;
 use Laminas\Code\Generator\DocBlockGenerator;
 use Laminas\Code\Generator\FileGenerator;
 use Laminas\Code\Generator\PropertyGenerator;
 use Laminas\Code\Generator\TypeGenerator;
-use yii\base\InvalidArgumentException;
 use yii\gii\CodeFile;
-use yii\helpers\ArrayHelper;
 use yii\helpers\Inflector;
 
 class SchemaGenerator
@@ -83,9 +80,9 @@ class SchemaGenerator
         return $files;
     }
 
-    protected function generateProperty(Schema $schema, string $name, Schema $property, string|null $enumName): PropertyGenerator
+    protected function generateProperty(Schema $schema, string $name, Schema|Reference $property, string|null $enumName): PropertyGenerator
     {
-        $isRequired = in_array($name, $schema->required ?? []) && !$property->nullable;
+        $isRequired = in_array($name, $schema->required ?? []) && ($property instanceof Schema && !$property->nullable);
         $type = Utils::convertType($property, $isRequired);
         $isArray = str_contains($type, '[]');
         $defaultValue = $property->default ?? ($isArray ? [] : null);
@@ -98,7 +95,9 @@ class SchemaGenerator
         $propGen->setType(TypeGenerator::fromTypeString($isArray ? 'array' : $type));
         $propGen->omitDefaultValue($isRequired && empty($defaultValue));
         $propGen->setDefaultValue($defaultValue);
-        $tags[] = new VarTag(null, $type, $property->description);
+        if ($property instanceof Schema) {
+            $tags[] = new VarTag(null, $type, $property->description);
+        }
 
         if ($enumName) {
             $tags[] = new GenericTag('see', '\\' . Config::$enumNamespace . '\\' . $enumName . ' for allowed vaules');
