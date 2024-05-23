@@ -44,16 +44,34 @@ class Utils
                         return self::schemaFromRef($schema->items) . '[]';
                     }
                     if ($schema->items instanceof Schema) {
-                        return self::schemaToType($schema->items) . '[]';
+                        $schemaToType = self::schemaToType($schema->items);
+                        if (in_array($schemaToType, ['int', 'bool', 'string', 'float'])) {
+                            return 'array';
+                        }
+
+                        return $schemaToType . '[]';
                     }
                     throw new InvalidArgumentException("Unsupported array configuration.");
                 }
 
                 return 'array';
             case 'object':
-                //todo
+                if ($schema?->additionalProperties) {
+                    if ($schema->additionalProperties instanceof Reference) {
+                        return self::schemaFromRef($schema->additionalProperties) . '[]';
+                    }
+                    if ($schema->additionalProperties instanceof Schema) {
+                        $schemaToType = self::schemaToType($schema->additionalProperties);
+                        if (in_array($schemaToType, ['int', 'bool', 'string', 'float'])) {
+                            return 'array';
+                        }
+
+                        return $schemaToType . '[]';
+                    }
+                    throw new InvalidArgumentException("Unsupported associative array configuration.");
+                }
             default:
-                throw new InvalidArgumentException("Unsupported property type {$property->type}");
+                throw new InvalidArgumentException("Unsupported property type {$schema?->type}");
         }
     }
 
