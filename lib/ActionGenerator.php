@@ -183,7 +183,15 @@ class ActionGenerator
         $responseType = null;
         $exceptions = [];
         foreach ($operation->responses ?? [] as $responseCode => $response) {
-            $responseCodeType = (int)floor($responseCode / 100);
+            if ($response instanceof Reference) {
+                $response = $response->resolve();
+            }
+
+            if ($responseCode === 'default') {
+                $responseCodeType = 5;
+            } else {
+                $responseCodeType = (int)floor($responseCode / 100);
+            }
             if (count($response->content) === 0) {
                 continue;
             }
