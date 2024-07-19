@@ -75,6 +75,20 @@ class Utils
         }
     }
 
+    public static function schemaTypeToRegex(string $type): string
+    {
+        switch ($type) {
+            case 'number':
+                return '[\d\.]+';
+            case 'integer':
+                return '\d+';
+            case 'boolean':
+                return '(true|false|1|0)';
+            default:
+                return '\S+';
+        }
+    }
+
     public static function convertType(Schema|Reference $property, bool $isRequired): string
     {
         $types = [];

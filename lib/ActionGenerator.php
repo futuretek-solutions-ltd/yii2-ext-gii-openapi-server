@@ -95,7 +95,7 @@ class ActionGenerator
                     $controllers[$controllerName]->methods[] = $this->generateAction($pathPrefixed, $pathItem->{$methodName}, $actionData, $parameters);
 
                     $fnName = $pathItem->{$methodName}->operationId ?? $actionData->actionName;
-                    $routes[strtoupper($methodName) . ' ' . $this->convertPathVariables($path)] = $this->parseControllerUri($actionData) . '/' . Inflector::camel2id($fnName);
+                    $routes[strtoupper($methodName) . ' ' . $this->convertPathVariables($path, $pathItem->{$methodName}->parameters ?? [])] = $this->parseControllerUri($actionData) . '/' . Inflector::camel2id($fnName);
                 }
             }
         }
@@ -274,13 +274,22 @@ class ActionGenerator
         return str_repeat("\t", $padding) . $code . "\n";
     }
 
-    protected function convertPathVariables(string $path): string
+    protected function convertPathVariables(string $path, $params): string
     {
+        $parMap = [];
+        foreach ($params as $param) {
+            if ($param instanceof Reference) {
+                $param = $param->resolve();
+            }
+            $parMap[$param->name] = $param->schema->type;
+        }
+
         $parts = explode('/', $path);
+
         foreach ($parts as &$part) {
             if (preg_match('/^\{.*\}$/', $part)) {
                 $variable = trim($part, '{}');
-                $type = '\S+';
+                $type = Utils::schemaTypeToRegex($parMap[$variable] ?? 'string');
                 $part = '<' . $variable . ':' . $type . '>';
             }
         }
