@@ -95,7 +95,7 @@ class ActionGenerator
                     $controllers[$controllerName]->methods[] = $this->generateAction($pathPrefixed, $pathItem->{$methodName}, $actionData, $parameters);
 
                     $fnName = $pathItem->{$methodName}->operationId ?? $actionData->actionName;
-                    $routes[strtoupper($methodName) . ' ' . $this->convertPathVariables($path, $pathItem->{$methodName}->parameters ?? [])] = $this->parseControllerUri($actionData) . '/' . Inflector::camel2id($fnName);
+                    $routes[strtoupper($methodName) . ' ' . $this->convertPathVariables($path, array_merge($pathItem->parameters, $pathItem->{$methodName}->parameters) ?? [])] = $this->parseControllerUri($actionData) . '/' . Inflector::camel2id($fnName);
                 }
             }
         }
