@@ -5,6 +5,7 @@ namespace futuretek\gii\openapi\server\lib;
 use cebe\openapi\spec\OpenApi;
 use cebe\openapi\spec\Reference;
 use cebe\openapi\spec\Schema;
+use futuretek\shared\Tools;
 use Laminas\Code\Generator\ClassGenerator;
 use Laminas\Code\Generator\DocBlock\Tag\GenericTag;
 use Laminas\Code\Generator\DocBlock\Tag\VarTag;
@@ -122,6 +123,17 @@ class SchemaGenerator
         return $gen;
     }
 
+    protected function removeAccents($value)
+    {
+        $remove = '{}[]()/\\.!@#$%^&*+|\'"<>:`;?';
+        $factory = \Transliterator::createFromRules(':: Any-Latin; :: Latin-ASCII; :: NFD; :: [:Nonspacing Mark:] Remove; :: Lower(); :: NFC;', \Transliterator::FORWARD);
+        $value = $factory->transliterate($value);
+        $value = str_replace(str_split($remove, 1), '', $value);
+        $value = str_replace(['-',' '], '_', $value);
+
+        return $value;
+    }
+
     protected function generateEnum(string $className, array $values): CodeFile
     {
         $basePath = Utils::getPathFromNamespace($this->enumNamespace);
@@ -139,7 +151,7 @@ class SchemaGenerator
         $classGenerator->setDocBlock($docBlockGenerator);
 
         foreach ($values as $value) {
-            $classGenerator->addConstant(strtoupper($value), $value);
+            $classGenerator->addConstant(strtoupper($this->removeAccents($value)), $value);
         }
 
         $fileGenerator = new FileGenerator();

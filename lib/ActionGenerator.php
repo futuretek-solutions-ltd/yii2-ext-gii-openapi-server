@@ -172,11 +172,13 @@ class ActionGenerator
             if (!isset($operation->requestBody->content)) {
                 throw new InvalidConfigException('Request body without content is not supported.');
             }
-            if (!isset($operation->requestBody->content['application/json'])) {
-                throw new InvalidConfigException('Only application/json media type is supported.');
-            }
 
-            $requestType = Utils::convertType($operation->requestBody->content['application/json']->schema, $operation->requestBody->required ?? false);
+            if (count($operation->requestBody->content) > 1) {
+                throw new InvalidConfigException('Multiple content types in request body not supported.');
+            }
+            foreach ($operation->requestBody->content as $contentType => $content) {
+                $requestType = Utils::convertType($content->schema, $operation->requestBody->required ?? false);
+            }
         }
 
         //Response
@@ -195,17 +197,19 @@ class ActionGenerator
             if (count($response->content) === 0) {
                 continue;
             }
-            if (!isset($response->content['application/json'])) {
-                throw new InvalidConfigException('Only application/json media type is supported.');
-            }
 
-            $convertType = Utils::convertType($response->content['application/json']->schema, true);
-            if ($responseCodeType === 2) {
-                $responseType = $convertType;
-                $tags[] = new ReturnTag($responseType, $response->description ?? null);
-            } elseif (in_array($responseCodeType, [4, 5], true)) {
-                $exceptions[$responseCode] = $convertType;
-                $tags[] = new ThrowsTag($convertType, $response->description ?? null);
+            if (count($response->content) > 1) {
+                throw new InvalidConfigException('Multiple content types in response not supported.');
+            }
+            foreach ($response->content as $contentType => $content) {
+                $convertType = Utils::convertType($content->schema, true);
+                if ($responseCodeType === 2) {
+                    $responseType = $convertType;
+                    $tags[] = new ReturnTag($responseType, $response->description ?? null);
+                } elseif (in_array($responseCodeType, [4, 5], true)) {
+                    $exceptions[$responseCode] = $convertType;
+                    $tags[] = new ThrowsTag($convertType, $response->description ?? null);
+                }
             }
         }
 
