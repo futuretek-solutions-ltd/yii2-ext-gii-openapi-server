@@ -13,6 +13,7 @@ use Laminas\Code\Generator\DocBlockGenerator;
 use Laminas\Code\Generator\FileGenerator;
 use Laminas\Code\Generator\PropertyGenerator;
 use Laminas\Code\Generator\TypeGenerator;
+use yii\base\NotSupportedException;
 use yii\gii\CodeFile;
 use yii\helpers\Inflector;
 
@@ -38,40 +39,50 @@ class SchemaGenerator
         $basePath = Utils::getPathFromNamespace($this->schemaNamespace);
 
         foreach ($this->openApi->components->schemas as $schemaName => $schema) {
-            $classGenerator = new ClassGenerator(
-                $schemaName,
-                $this->schemaNamespace,
-                null,
-                'yii\base\BaseObject'
-            );
+            if ($schema->type === 'object') {
+                $classGenerator = new ClassGenerator(
+                    $schemaName,
+                    $this->schemaNamespace,
+                    null,
+                    'yii\base\BaseObject'
+                );
 
-            $docBlockGenerator = new DocBlockGenerator($schema->description);
-            $tags = [];
-            $tags[] = new GenericTag('package', $this->schemaNamespace);
-            if ($schema->deprecated) {
-                $tags[] = new GenericTag('deprecated', 'This scheme has been deprecated');
-            }
-
-            $docBlockGenerator->setTags($tags);
-            $classGenerator->setDocBlock($docBlockGenerator);
-
-            foreach ($schema->properties as $propName => $property) {
-                $enumName = null;
-                if (!empty($property->enum)) {
-                    $enumName = $property->{'x-enum'} ?? ucfirst($schemaName) . Inflector::camelize($propName);
-                    $enums[$enumName] = $property->enum;
+                $docBlockGenerator = new DocBlockGenerator($schema->description);
+                $tags = [];
+                $tags[] = new GenericTag('package', $this->schemaNamespace);
+                if ($schema->deprecated) {
+                    $tags[] = new GenericTag('deprecated', 'This scheme has been deprecated');
                 }
-                $classGenerator->addPropertyFromGenerator($this->generateProperty($schema, $propName, $property, $enumName));
+
+                $docBlockGenerator->setTags($tags);
+                $classGenerator->setDocBlock($docBlockGenerator);
+
+                foreach ($schema->properties as $propName => $property) {
+                    if ($property instanceof Reference) {
+                        $property = $property->resolve();
+                    }
+                    $enumName = null;
+                    if (!empty($property->enum)) {
+                        $enumName = $property->{'x-enum'} ?? ucfirst($schemaName) . Inflector::camelize($propName);
+                        $enums[$enumName] = $property->enum;
+                    }
+                    $classGenerator->addPropertyFromGenerator($this->generateProperty($schema, $propName, $property, $enumName));
+                }
+
+                $fileGenerator = new FileGenerator();
+                $fileGenerator->setDocBlock($this->getFileDocBlock());
+                $fileGenerator->setClass($classGenerator);
+
+                $files[] = new CodeFile(
+                    "$basePath/$schemaName.php",
+                    $fileGenerator->generate()
+                );
+            } elseif (!empty($schema->enum)) {
+                $enumName = $schema->{'x-enum'} ?? ucfirst($schemaName);
+                $enums[$enumName] = $schema->enum;
+            } else {
+                throw new NotSupportedException("Schema type {$schema->type} not supported.");
             }
-
-            $fileGenerator = new FileGenerator();
-            $fileGenerator->setDocBlock($this->getFileDocBlock());
-            $fileGenerator->setClass($classGenerator);
-
-            $files[] = new CodeFile(
-                "$basePath/$schemaName.php",
-                $fileGenerator->generate()
-            );
         }
 
         foreach ($enums as $enumName => $enumValues) {
@@ -129,7 +140,7 @@ class SchemaGenerator
         $factory = \Transliterator::createFromRules(':: Any-Latin; :: Latin-ASCII; :: NFD; :: [:Nonspacing Mark:] Remove; :: Lower(); :: NFC;', \Transliterator::FORWARD);
         $value = $factory->transliterate($value);
         $value = str_replace(str_split($remove, 1), '', $value);
-        $value = str_replace(['-',' '], '_', $value);
+        $value = str_replace(['-', ' '], '_', $value);
 
         return $value;
     }
