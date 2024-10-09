@@ -89,11 +89,19 @@ class Utils
         }
     }
 
-    public static function convertType(Schema|Reference $property, bool $isRequired): string
+    public static function convertType(Schema|Reference $property, bool $isRequired, string|null $enumName = null): string
     {
         $types = [];
 
-        if ($property instanceof Reference) {
+        if ($enumName) {
+            if ($property instanceof Reference) {
+                $property = $property->resolve();
+            }
+            $types[] = $property->type;
+            if (!$isRequired || $property?->nullable || in_array(null, $property->enum, true)) {
+                $types[] = 'null';
+            }
+        } elseif ($property instanceof Reference) {
             $types[] = self::schemaFromRef($property);
             if (!$isRequired) {
                 $types[] = 'null';

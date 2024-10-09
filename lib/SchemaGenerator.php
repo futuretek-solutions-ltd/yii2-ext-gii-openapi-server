@@ -59,12 +59,14 @@ class SchemaGenerator
 
                 foreach ($schema->properties as $propName => $property) {
                     if ($property instanceof Reference) {
-                        $property = $property->resolve();
+                        $propertyResolved = $property->resolve();
+                    } else {
+                        $propertyResolved = $property;
                     }
                     $enumName = null;
-                    if (!empty($property->enum)) {
-                        $enumName = $property->{'x-enum'} ?? ucfirst($schemaName) . Inflector::camelize($propName);
-                        $enums[$enumName] = $property->enum;
+                    if (!empty($propertyResolved->enum)) {
+                        $enumName = $propertyResolved->{'x-enum'} ?? ucfirst($schemaName) . Inflector::camelize($propName);
+                        $enums[$enumName] = $propertyResolved->enum;
                     }
                     $classGenerator->addPropertyFromGenerator($this->generateProperty($schema, $propName, $property, $enumName));
                 }
@@ -95,7 +97,7 @@ class SchemaGenerator
     protected function generateProperty(Schema $schema, string $name, Schema|Reference $property, string|null $enumName): PropertyGenerator
     {
         $isRequired = in_array($name, $schema->required ?? []) && ($property instanceof Schema && !$property->nullable);
-        $type = Utils::convertType($property, $isRequired);
+        $type = Utils::convertType($property, $isRequired, $enumName);
         $isArray = str_contains($type, '[]');
         $defaultValue = $property->default ?? ($isArray ? [] : null);
 
