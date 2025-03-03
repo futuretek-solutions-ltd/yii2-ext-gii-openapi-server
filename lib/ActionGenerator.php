@@ -154,8 +154,13 @@ class ActionGenerator
             if ($parameter->in !== 'path' && $parameter->in !== 'query') {
                 continue;
             }
-            $isRequired = in_array($parameter->name, $parameter->schema->required ?? []) || $parameter->required;
-            $pGen = new ParameterGenerator($parameter->name, Utils::convertType($parameter->schema, $isRequired));
+            if ($parameter->schema instanceof Reference) {
+                $parameterSchema = $parameter->schema->resolve();
+            } else {
+                $parameterSchema = $parameter->schema;
+            }
+            $isRequired = in_array($parameter->name, $parameterSchema->required ?? [], true) || $parameter->required;
+            $pGen = new ParameterGenerator($parameter->name, Utils::convertType($parameter->schema, $isRequired, empty($parameterSchema->enum) ? null : 'bogus'));
             if (!$isRequired) {
                 $pGen->setDefaultValue(null);
                 $pGen->omitDefaultValue(false);
@@ -284,6 +289,9 @@ class ActionGenerator
         foreach ($params as $param) {
             if ($param instanceof Reference) {
                 $param = $param->resolve();
+            }
+            if ($param->schema instanceof Reference) {
+                $param->schema = $param->schema->resolve();
             }
             $parMap[$param->name] = $param->schema->type;
         }
